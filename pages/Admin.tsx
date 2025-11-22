@@ -1,95 +1,123 @@
-import React, { useState, useEffect } from 'react';
-import { Trash2, Users, CheckCircle } from 'lucide-react';
-import { resetSurvey, getAnswers } from '../services/surveyService';
+import React, { useState } from 'react';
+import { Trash2, Users, Play, Link as LinkIcon, ArrowRight } from 'lucide-react';
+import { createSession } from '../services/surveyService';
+import { Session } from '../types';
+import { Link, useNavigate } from 'react-router-dom';
 
 const Admin: React.FC = () => {
-  const [responseCount, setResponseCount] = useState(0);
-  const [uniqueUsers, setUniqueUsers] = useState(0);
-  const [resetConfirmed, setResetConfirmed] = useState(false);
+  const [sessionName, setSessionName] = useState('');
+  const [currentSession, setCurrentSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    const updateStats = () => {
-      const answers = getAnswers();
-      setResponseCount(answers.length);
-      const uniqueSessions = new Set(answers.map(a => a.sessionId));
-      setUniqueUsers(uniqueSessions.size);
-    };
+  const handleCreateSession = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!sessionName.trim()) return;
 
-    updateStats();
+    setLoading(true);
+    const session = await createSession(sessionName);
+    setLoading(false);
+
+    if (session) {
+      setCurrentSession(session);
+    }
+  };
+
+  const playUrl = currentSession 
+    ? `${window.location.origin}${window.location.pathname}#/play?sessionId=${currentSession.id}`
+    : '';
     
-    // Listen for updates from other tabs
-    window.addEventListener('storage', updateStats);
-    const interval = setInterval(updateStats, 2000); // Poll just in case
+  const qrCodeUrl = currentSession 
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(playUrl)}`
+    : '';
 
-    return () => {
-      window.removeEventListener('storage', updateStats);
-      clearInterval(interval);
-    };
-  }, []);
-
-  const handleReset = () => {
-    if (confirm('Tem certeza? Isso apagará TODAS as respostas coletadas.')) {
-      resetSurvey();
-      setResetConfirmed(true);
-      setTimeout(() => setResetConfirmed(false), 2000);
+  const goToResults = () => {
+    if (currentSession) {
+      navigate(`/results?sessionId=${currentSession.id}`);
     }
   };
 
   return (
     <div className="container mx-auto p-6 max-w-4xl">
-      <h1 className="text-3xl font-bold text-slate-800 mb-8 border-b pb-4">Painel Administrativo</h1>
+      <h1 className="text-3xl font-bold text-slate-800 mb-2">Painel Administrativo</h1>
+      <p className="text-slate-500 mb-8">Crie uma nova sessão para gerar um código único para esta turma.</p>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-        {/* Stats Card */}
-        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-brand-500">
-          <div className="flex items-center gap-4 mb-2">
-            <div className="p-3 bg-brand-100 rounded-full text-brand-600">
-              <Users size={24} />
+      {!currentSession ? (
+        <div className="bg-white p-8 rounded-xl shadow-md border-l-4 border-brand-500">
+          <h2 className="text-xl font-bold mb-4 text-slate-800">Nova Sessão</h2>
+          <form onSubmit={handleCreateSession} className="flex flex-col gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Nome da Sessão / Turma</label>
+              <input 
+                type="text" 
+                className="w-full p-3 bg-white text-black border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none placeholder-slate-500"
+                placeholder="Ex: Liderança - Turma A"
+                value={sessionName}
+                onChange={(e) => setSessionName(e.target.value)}
+                required
+              />
             </div>
-            <h3 className="text-lg font-semibold text-slate-700">Participação</h3>
+            <button 
+              type="submit" 
+              disabled={loading}
+              className="bg-brand-600 text-white py-3 px-6 rounded-lg font-bold hover:bg-brand-700 transition flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {loading ? 'Criando...' : 'Iniciar Sessão'} <Play size={20} />
+            </button>
+          </form>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* QR Code Card */}
+          <div className="bg-white p-6 rounded-xl shadow-md">
+            <h3 className="text-lg font-bold text-brand-900 mb-4 border-b pb-2">Entrada dos Participantes</h3>
+            <div className="flex flex-col items-center">
+              <div className="bg-gray-100 p-4 rounded-lg mb-4">
+                 <img src={qrCodeUrl} alt="QR Code" className="w-64 h-64 mix-blend-multiply" />
+              </div>
+              <div className="text-center w-full">
+                <p className="text-sm text-slate-500 font-mono bg-slate-100 p-2 rounded break-all mb-4">
+                  {playUrl}
+                </p>
+                <div className="flex flex-col gap-2">
+                  <button 
+                    onClick={() => navigator.clipboard.writeText(playUrl)}
+                    className="text-brand-600 text-sm hover:underline flex items-center justify-center gap-1"
+                  >
+                    <LinkIcon size={16} /> Copiar Link
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="mt-4 grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-3xl font-bold text-slate-900">{uniqueUsers}</p>
-              <p className="text-sm text-slate-500">Participantes Ativos</p>
+
+          {/* Actions Card */}
+          <div className="flex flex-col gap-6">
+            <div className="bg-white p-6 rounded-xl shadow-md border-t-4 border-green-500">
+              <h3 className="text-lg font-bold text-slate-800 mb-2">Sessão Ativa</h3>
+              <p className="text-3xl font-bold text-brand-600 mb-1">{currentSession.name}</p>
+              <p className="text-xs text-slate-400 uppercase tracking-wider font-bold">ID: {currentSession.id}</p>
+              
+              <div className="mt-8">
+                <p className="text-slate-600 mb-4">Quando todos os participantes entrarem, vá para a tela de resultados.</p>
+                <button 
+                  onClick={goToResults}
+                  className="w-full py-4 bg-brand-500 text-white font-bold rounded-xl shadow-lg hover:bg-brand-400 transition-all flex items-center justify-center gap-2 text-lg"
+                >
+                  Ver Resultados <ArrowRight size={24} />
+                </button>
+              </div>
             </div>
-            <div>
-              <p className="text-3xl font-bold text-slate-900">{responseCount}</p>
-              <p className="text-sm text-slate-500">Total de Respostas</p>
-            </div>
+
+            <button 
+              onClick={() => setCurrentSession(null)}
+              className="p-4 bg-slate-200 text-slate-600 rounded-lg font-medium hover:bg-slate-300 transition"
+            >
+              ← Criar outra sessão
+            </button>
           </div>
         </div>
-
-        {/* Actions Card */}
-        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-kahoot-red">
-           <div className="flex items-center gap-4 mb-2">
-            <div className="p-3 bg-red-100 rounded-full text-kahoot-red">
-              <Trash2 size={24} />
-            </div>
-            <h3 className="text-lg font-semibold text-slate-700">Controle de Sessão</h3>
-          </div>
-          <p className="text-slate-500 text-sm mb-6">
-            Ao iniciar uma nova rodada, limpe os dados anteriores. Esta ação é irreversível.
-          </p>
-          <button 
-            onClick={handleReset}
-            className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg shadow transition-colors flex items-center justify-center gap-2"
-          >
-            {resetConfirmed ? <CheckCircle size={20} /> : <Trash2 size={20} />}
-            {resetConfirmed ? 'Reiniciado com Sucesso!' : 'Limpar Dados e Reiniciar'}
-          </button>
-        </div>
-      </div>
-
-      <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-        <h4 className="font-bold text-slate-700 mb-2">Instruções</h4>
-        <ul className="list-disc list-inside text-slate-600 space-y-1 text-sm">
-          <li>Peça aos participantes para escanearem o QR Code na tela inicial.</li>
-          <li>Monitore o número de participantes ativos neste painel.</li>
-          <li>Quando todos terminarem, exiba a página de <strong>Resultados</strong> no telão.</li>
-          <li>Use o botão acima para limpar os dados antes de uma nova turma.</li>
-        </ul>
-      </div>
+      )}
     </div>
   );
 };

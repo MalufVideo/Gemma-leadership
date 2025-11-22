@@ -1,126 +1,161 @@
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Answer, AnswerOption } from '../types';
 import { QUESTIONS, OPTIONS } from '../constants';
-import { getAnswers } from '../services/surveyService';
-import { BarChart3 } from 'lucide-react';
+import { getAnswersForSession, subscribeToSessionAnswers, getSession } from '../services/surveyService';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { Loader2, AlertCircle } from 'lucide-react';
 
 const Results: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const sessionId = searchParams.get('sessionId');
+  
   const [answers, setAnswers] = useState<Answer[]>([]);
-  const [totalParticipants, setTotalParticipants] = useState(0);
-
-  const fetchData = () => {
-    const data = getAnswers();
-    setAnswers(data);
-    const unique = new Set(data.map(a => a.sessionId));
-    setTotalParticipants(unique.size);
-  };
+  const [sessionName, setSessionName] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchData();
-    // Listen to changes from local storage (other tabs)
-    window.addEventListener('storage', fetchData);
-    
-    // Also poll for changes within the same tab/browser context if needed
-    const interval = setInterval(fetchData, 2000);
+    if (!sessionId) {
+      setLoading(false);
+      return;
+    }
+
+    // Load initial data
+    const init = async () => {
+      const [sess, ans] = await Promise.all([
+        getSession(sessionId),
+        getAnswersForSession(sessionId)
+      ]);
+      
+      if (sess) setSessionName(sess.name);
+      setAnswers(ans);
+      setLoading(false);
+    };
+    init();
+
+    // Subscribe to realtime updates
+    const subscription = subscribeToSessionAnswers(sessionId, (payload) => {
+      const newAnswer = {
+        id: payload.new.id,
+        questionId: payload.new.question_id,
+        option: payload.new.option_value as AnswerOption,
+        sessionId: payload.new.session_id
+      };
+      setAnswers(prev => [...prev, newAnswer]);
+    });
 
     return () => {
-      window.removeEventListener('storage', fetchData);
-      clearInterval(interval);
+      subscription.unsubscribe();
     };
-  }, []);
+  }, [sessionId]);
 
-  // Helper to get stats for a specific question
-  const getQuestionStats = (questionId: number) => {
+  if (!sessionId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-slate-500">
+         <div className="text-center">
+            <AlertCircle className="mx-auto mb-2" size={40} />
+            <p>Nenhuma sessão selecionada.</p>
+            <p className="text-sm">Acesse através do painel Admin.</p>
+         </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-brand-600">
+        <Loader2 className="animate-spin" size={48} />
+      </div>
+    );
+  }
+
+  // Calculate stats
+  const uniqueParticipants = new Set(answers.map(a => a.sessionId)).size; // Note: In supabase raw version, we might not have distinct user IDs unless we store a cookie UUID. 
+  // *Fix*: Since Supabase answers table doesn't track "who" strictly without auth, we can just count total answers divided by questions answered, or just show "Total Responses". 
+  // For better accuracy in this anon-mode, let's just show Total Responses.
+  const totalResponses = answers.length;
+
+  // Data transformation for Recharts
+  const getChartData = (questionId: number) => {
     const qAnswers = answers.filter(a => a.questionId === questionId);
     const total = qAnswers.length;
-    
-    const stats = OPTIONS.map(opt => {
+
+    return OPTIONS.map(opt => {
       const count = qAnswers.filter(a => a.option === opt.value).length;
-      const percentage = total === 0 ? 0 : Math.round((count / total) * 100);
-      return { ...opt, count, percentage };
+      // Map Tailwind classes to Hex codes for Recharts
+      let fill = '#cbd5e1'; // default gray
+      if (opt.color.includes('kahoot-red')) fill = '#e21b3c';
+      if (opt.color.includes('kahoot-blue')) fill = '#1368ce';
+      if (opt.color.includes('kahoot-yellow')) fill = '#d89e00';
+      if (opt.color.includes('kahoot-green')) fill = '#26890c';
+
+      return {
+        name: opt.label,
+        value: count,
+        total: total,
+        fill: fill,
+        label: opt.label // clean label
+      };
     });
-
-    return { total, stats };
   };
-
-  // Calculate overall average sentiment (simplified)
-  // Assuming scale: Sempre=4, Quase Sempre=3, Quase Nunca=2, Nunca=1
-  // This is just a rough visualization metric
-  const calculateOverallScore = () => {
-    if (answers.length === 0) return 0;
-    
-    const scoreMap: Record<string, number> = {
-      [AnswerOption.SEMPRE]: 100,
-      [AnswerOption.QUASE_SEMPRE]: 75,
-      [AnswerOption.QUASE_NUNCA]: 25,
-      [AnswerOption.NUNCA]: 0,
-    };
-
-    let totalScore = 0;
-    answers.forEach(a => {
-      totalScore += scoreMap[a.option] || 0;
-    });
-
-    return Math.round(totalScore / answers.length);
-  };
-
-  const overallScore = calculateOverallScore();
 
   return (
     <div className="min-h-screen bg-slate-50 p-6 pb-20">
       <div className="max-w-7xl mx-auto">
-        <header className="flex flex-col md:flex-row justify-between items-end mb-8 border-b border-slate-200 pb-4">
+        <header className="flex flex-col md:flex-row justify-between items-end mb-8 border-b border-slate-200 pb-4 sticky top-0 bg-slate-50 z-10 pt-4">
           <div>
-             <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">Resultados da Equipe</h1>
-             <p className="text-slate-500 mt-2">Dados atualizados em tempo real</p>
+             <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">Resultados</h1>
+             <h2 className="text-xl text-brand-600 font-medium mt-1">{sessionName || 'Sessão Ativa'}</h2>
           </div>
           <div className="flex gap-6 mt-4 md:mt-0 text-right">
              <div>
-                <span className="block text-3xl font-bold text-brand-600">{totalParticipants}</span>
-                <span className="text-xs uppercase font-bold text-slate-400">Participantes</span>
-             </div>
-             <div>
-                <span className="block text-3xl font-bold text-emerald-600">{overallScore}%</span>
-                <span className="text-xs uppercase font-bold text-slate-400">Adesão Positiva</span>
+                <span className="block text-3xl font-bold text-slate-700">{totalResponses}</span>
+                <span className="text-xs uppercase font-bold text-slate-400">Respostas Totais</span>
              </div>
           </div>
         </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {QUESTIONS.map((q) => {
-            const { total, stats } = getQuestionStats(q.id);
+            const data = getChartData(q.id);
+            const totalForQ = data.reduce((acc, curr) => acc + curr.value, 0);
             
             return (
-              <div key={q.id} className="bg-white rounded-xl shadow-sm border border-slate-100 p-5 flex flex-col">
-                <div className="mb-4 flex gap-3 items-start">
-                  <span className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 text-slate-600 font-bold text-sm">
+              <div key={q.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 break-inside-avoid">
+                <div className="mb-6 flex gap-3 items-start h-16">
+                  <span className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-brand-100 text-brand-700 font-bold text-sm">
                     {q.id}
                   </span>
-                  <h3 className="font-semibold text-slate-800 leading-snug">{q.text}</h3>
+                  <h3 className="font-bold text-slate-800 text-lg leading-snug">{q.text}</h3>
                 </div>
 
-                <div className="mt-auto space-y-3">
-                  {stats.map((stat) => (
-                    <div key={stat.value} className="relative">
-                      <div className="flex justify-between text-xs font-medium text-slate-500 mb-1 z-10 relative">
-                        <span className="flex items-center gap-1">
-                           <span className={stat.color.replace('bg-', 'text-')}>●</span> {stat.label}
-                        </span>
-                        <span>{stat.count} ({stat.percentage}%)</span>
-                      </div>
-                      <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
-                        <div 
-                          className={`${stat.color} h-full transition-all duration-500 ease-out`}
-                          style={{ width: `${stat.percentage}%` }}
-                        ></div>
-                      </div>
+                <div className="h-48 w-full">
+                  {totalForQ > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={data} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                        <XAxis type="number" hide />
+                        <YAxis 
+                          dataKey="name" 
+                          type="category" 
+                          width={100} 
+                          tick={{fontSize: 11, fill: '#64748b'}} 
+                          interval={0}
+                        />
+                        <Tooltip 
+                          cursor={{fill: 'transparent'}}
+                          contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
+                        />
+                        <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                          {data.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-slate-300 italic text-sm bg-slate-50 rounded-lg border border-dashed border-slate-200">
+                      Aguardando respostas...
                     </div>
-                  ))}
-                  
-                  {total === 0 && (
-                     <div className="text-center py-4 text-slate-300 italic text-sm">
-                       Aguardando respostas...
-                     </div>
                   )}
                 </div>
               </div>

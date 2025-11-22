@@ -11,9 +11,10 @@ export interface Question {
 }
 
 export interface Answer {
-  questionId: number;
-  option: AnswerOption;
-  timestamp: number;
+  id?: string;
+  questionId: number; // mapped from question_id in DB
+  option: AnswerOption; // mapped from option_value in DB
+  timestamp?: number; // optional, DB handles created_at
   sessionId: string;
 }
 
@@ -27,4 +28,11 @@ export interface ChartDataPoint {
   name: string;
   value: number;
   fill: string;
+}
+
+export interface Session {
+  id: string;
+  name: string;
+  status: 'active' | 'finished';
+  created_at: string;
 }
