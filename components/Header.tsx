@@ -4,8 +4,10 @@ import { Link, useLocation } from 'react-router-dom';
 const Header: React.FC = () => {
   const location = useLocation();
   const isGame = location.pathname === '/play';
+  const isLogin = location.pathname === '/login';
 
-  if (isGame) return null; // Don't show standard header during gameplay for immersion
+  // Don't show standard header during gameplay or on login screen
+  if (isGame || isLogin) return null; 
 
   return (
     <nav className="bg-brand-900 text-white p-4 shadow-md">

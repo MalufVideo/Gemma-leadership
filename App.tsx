@@ -6,6 +6,8 @@ import Play from './pages/Play';
 import Admin from './pages/Admin';
 import Results from './pages/Results';
 import Presenter from './pages/Presenter';
+import Login from './pages/Login';
+import ProtectedRoute from './components/ProtectedRoute';
 
 const App: React.FC = () => {
   return (
@@ -14,11 +16,36 @@ const App: React.FC = () => {
         <Header />
         <main className="flex-grow">
           <Routes>
+            {/* Public Routes */}
             <Route path="/" element={<Home />} />
             <Route path="/play" element={<Play />} />
-            <Route path="/admin" element={<Admin />} />
-            <Route path="/results" element={<Results />} />
-            <Route path="/presenter" element={<Presenter />} />
+            <Route path="/login" element={<Login />} />
+            
+            {/* Protected Routes */}
+            <Route 
+              path="/admin" 
+              element={
+                <ProtectedRoute>
+                  <Admin />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/results" 
+              element={
+                <ProtectedRoute>
+                  <Results />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/presenter" 
+              element={
+                <ProtectedRoute>
+                  <Presenter />
+                </ProtectedRoute>
+              } 
+            />
           </Routes>
         </main>
       </div>
