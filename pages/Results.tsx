@@ -3,8 +3,31 @@ import { useSearchParams } from 'react-router-dom';
 import { Answer, AnswerOption } from '../types';
 import { QUESTIONS, OPTIONS } from '../constants';
 import { getAnswersForSession, subscribeToSessionAnswers, getSession } from '../services/surveyService';
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, Legend, ResponsiveContainer } from 'recharts';
 import { Loader2, AlertCircle } from 'lucide-react';
+
+const RADIAN = Math.PI / 180;
+
+const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, value }: any) => {
+  if (value === 0) return null;
+  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+  return (
+    <text 
+      x={x} 
+      y={y} 
+      fill="white" 
+      textAnchor="middle" 
+      dominantBaseline="central"
+      className="text-sm font-bold"
+      style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}
+    >
+      {value}
+    </text>
+  );
+};
 
 const Results: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -138,15 +161,13 @@ const Results: React.FC = () => {
                           outerRadius={80}
                           paddingAngle={2}
                           dataKey="value"
+                          labelLine={false}
+                          label={renderCustomizedLabel}
                         >
                           {data.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.fill} stroke="#fff" strokeWidth={2} />
                           ))}
                         </Pie>
-                        <Tooltip 
-                          contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
-                          itemStyle={{color: '#334155'}}
-                        />
                         <Legend 
                            verticalAlign="bottom" 
                            height={36} 
