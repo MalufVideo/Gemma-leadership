@@ -3,9 +3,9 @@ import { AnswerOption, Question } from './types';
 export const QUESTIONS: Question[] = [
   { id: 1, text: "Tenho compreensão do que meu líder me demanda" },
   { id: 2, text: "Me parece claro o que meu líder está dizendo durante nossas conversas" },
-  { id: 3, text: "Meu líder se assegura de que meu entendimento sobre sua fala está correto?" },
-  { id: 4, text: "Minha líder checa meu entendimento sobre o que está sento dito ou solicitado?" },
-  { id: 5, text: "Meu líder esclarece claramente as prioridades de tarefa?" },
+  { id: 3, text: "Meu líder se assegura de que meu entendimento sobre sua fala está correto" },
+  { id: 4, text: "Minha líder checa meu entendimento sobre o que está sento dito ou solicitado" },
+  { id: 5, text: "Meu líder esclarece claramente as prioridades de tarefa" },
   { id: 6, text: "Tenho liberdade para questionar os posicionamentos do meu líder" },
   { id: 7, text: "Meu líder faz aquilo que fala" },
   { id: 8, text: "Confio que meu líder sabe me direcionar para o cumprimento da estratégia" },
@@ -24,10 +24,8 @@ export const QUESTIONS: Question[] = [
 ];
 
 export const OPTIONS = [
-  { label: AnswerOption.SEMPRE, color: 'bg-kahoot-green', value: AnswerOption.SEMPRE, icon: '▲' },
-  { label: AnswerOption.QUASE_SEMPRE, color: 'bg-kahoot-blue', value: AnswerOption.QUASE_SEMPRE, icon: '◆' },
-  { label: AnswerOption.QUASE_NUNCA, color: 'bg-kahoot-yellow', value: AnswerOption.QUASE_NUNCA, icon: '●' },
-  { label: AnswerOption.NUNCA, color: 'bg-kahoot-red', value: AnswerOption.NUNCA, icon: '■' },
+  { label: AnswerOption.QUASE_SEMPRE, color: 'bg-kahoot-green', value: AnswerOption.QUASE_SEMPRE, icon: '▲' },
+  { label: AnswerOption.QUASE_NUNCA, color: 'bg-kahoot-red', value: AnswerOption.QUASE_NUNCA, icon: '■' },
 ];
 
 export const STORAGE_KEY = 'gemmaconsult_data';

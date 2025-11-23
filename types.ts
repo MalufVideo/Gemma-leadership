@@ -1,8 +1,6 @@
 export enum AnswerOption {
-  SEMPRE = 'Sempre',
   QUASE_SEMPRE = 'Quase sempre',
   QUASE_NUNCA = 'Quase nunca',
-  NUNCA = 'Nunca',
 }
 
 export interface Question {
