@@ -14,7 +14,6 @@ const Header: React.FC = () => {
           GemmaConsult
         </Link>
         <div className="flex gap-4 text-sm font-medium">
-          <Link to="/results" className="hover:text-brand-500 transition-colors">Resultados</Link>
           <Link to="/admin" className="hover:text-brand-500 transition-colors">Admin</Link>
         </div>
       </div>

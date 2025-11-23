@@ -1,14 +1,25 @@
-import React, { useState } from 'react';
-import { Trash2, Users, Play, Link as LinkIcon, ArrowRight } from 'lucide-react';
-import { createSession } from '../services/surveyService';
+import React, { useState, useEffect } from 'react';
+import { Trash2, Play, Link as LinkIcon, BarChart2, QrCode, Copy, Check, Monitor } from 'lucide-react';
+import { createSession, getSessions } from '../services/surveyService';
 import { Session } from '../types';
 import { Link, useNavigate } from 'react-router-dom';
 
 const Admin: React.FC = () => {
   const [sessionName, setSessionName] = useState('');
-  const [currentSession, setCurrentSession] = useState<Session | null>(null);
+  const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(false);
+  const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    loadSessions();
+  }, []);
+
+  const loadSessions = async () => {
+    const data = await getSessions();
+    setSessions(data);
+  };
 
   const handleCreateSession = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,105 +30,160 @@ const Admin: React.FC = () => {
     setLoading(false);
 
     if (session) {
-      setCurrentSession(session);
+      setSessionName('');
+      await loadSessions();
+      setExpandedSessionId(session.id); // Auto expand new session
     }
   };
 
-  const playUrl = currentSession 
-    ? `${window.location.origin}${window.location.pathname}#/play?sessionId=${currentSession.id}`
-    : '';
-    
-  const qrCodeUrl = currentSession 
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(playUrl)}`
-    : '';
+  const toggleExpand = (id: string) => {
+    setExpandedSessionId(expandedSessionId === id ? null : id);
+  };
 
-  const goToResults = () => {
-    if (currentSession) {
-      navigate(`/results?sessionId=${currentSession.id}`);
-    }
+  const getPlayUrl = (sessionId: string) => 
+    `${window.location.origin}${window.location.pathname}#/play?sessionId=${sessionId}`;
+
+  const getQrUrl = (sessionId: string) => 
+    `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(getPlayUrl(sessionId))}`;
+
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const openPresenterMode = (sessionId: string) => {
+    window.open(`#/presenter?sessionId=${sessionId}`, '_blank');
   };
 
   return (
-    <div className="container mx-auto p-6 max-w-4xl">
-      <h1 className="text-3xl font-bold text-slate-800 mb-2">Painel Administrativo</h1>
-      <p className="text-slate-500 mb-8">Crie uma nova sessão para gerar um código único para esta turma.</p>
+    <div className="container mx-auto p-6 max-w-5xl">
+      <h1 className="text-3xl font-bold text-slate-800 mb-6">Painel Administrativo</h1>
 
-      {!currentSession ? (
-        <div className="bg-white p-8 rounded-xl shadow-md border-l-4 border-brand-500">
-          <h2 className="text-xl font-bold mb-4 text-slate-800">Nova Sessão</h2>
-          <form onSubmit={handleCreateSession} className="flex flex-col gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Nome da Sessão / Turma</label>
-              <input 
-                type="text" 
-                className="w-full p-3 bg-white text-black border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none placeholder-slate-500"
-                placeholder="Ex: Liderança - Turma A"
-                value={sessionName}
-                onChange={(e) => setSessionName(e.target.value)}
-                required
-              />
-            </div>
-            <button 
-              type="submit" 
-              disabled={loading}
-              className="bg-brand-600 text-white py-3 px-6 rounded-lg font-bold hover:bg-brand-700 transition flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {loading ? 'Criando...' : 'Iniciar Sessão'} <Play size={20} />
-            </button>
-          </form>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* QR Code Card */}
-          <div className="bg-white p-6 rounded-xl shadow-md">
-            <h3 className="text-lg font-bold text-brand-900 mb-4 border-b pb-2">Entrada dos Participantes</h3>
-            <div className="flex flex-col items-center">
-              <div className="bg-gray-100 p-4 rounded-lg mb-4">
-                 <img src={qrCodeUrl} alt="QR Code" className="w-64 h-64 mix-blend-multiply" />
-              </div>
-              <div className="text-center w-full">
-                <p className="text-sm text-slate-500 font-mono bg-slate-100 p-2 rounded break-all mb-4">
-                  {playUrl}
-                </p>
-                <div className="flex flex-col gap-2">
-                  <button 
-                    onClick={() => navigator.clipboard.writeText(playUrl)}
-                    className="text-brand-600 text-sm hover:underline flex items-center justify-center gap-1"
-                  >
-                    <LinkIcon size={16} /> Copiar Link
-                  </button>
-                </div>
-              </div>
-            </div>
+      {/* Create Session Card */}
+      <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-brand-500 mb-10">
+        <h2 className="text-xl font-bold mb-4 text-slate-800">Nova Sessão</h2>
+        <form onSubmit={handleCreateSession} className="flex flex-col md:flex-row gap-4 items-end">
+          <div className="flex-grow w-full">
+            <label className="block text-sm font-medium text-slate-700 mb-1">Nome da Sessão / Turma</label>
+            <input 
+              type="text" 
+              className="w-full p-3 bg-white text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none placeholder-slate-400"
+              placeholder="Ex: Liderança - Turma Outubro"
+              value={sessionName}
+              onChange={(e) => setSessionName(e.target.value)}
+              required
+            />
           </div>
+          <button 
+            type="submit" 
+            disabled={loading}
+            className="w-full md:w-auto bg-brand-600 text-white py-3 px-6 rounded-lg font-bold hover:bg-brand-700 transition flex items-center justify-center gap-2 disabled:opacity-50 whitespace-nowrap"
+          >
+            {loading ? 'Criando...' : 'Criar Sessão'} <Play size={20} />
+          </button>
+        </form>
+      </div>
 
-          {/* Actions Card */}
-          <div className="flex flex-col gap-6">
-            <div className="bg-white p-6 rounded-xl shadow-md border-t-4 border-green-500">
-              <h3 className="text-lg font-bold text-slate-800 mb-2">Sessão Ativa</h3>
-              <p className="text-3xl font-bold text-brand-600 mb-1">{currentSession.name}</p>
-              <p className="text-xs text-slate-400 uppercase tracking-wider font-bold">ID: {currentSession.id}</p>
-              
-              <div className="mt-8">
-                <p className="text-slate-600 mb-4">Quando todos os participantes entrarem, vá para a tela de resultados.</p>
+      <h2 className="text-xl font-bold text-slate-700 mb-4">Histórico de Sessões</h2>
+
+      <div className="flex flex-col gap-4">
+        {sessions.length === 0 && (
+          <div className="text-center py-10 bg-slate-50 rounded-lg border border-dashed border-slate-300 text-slate-500">
+            Nenhuma sessão encontrada. Crie uma acima para começar.
+          </div>
+        )}
+
+        {sessions.map((session) => (
+          <div key={session.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden transition-all duration-300">
+            {/* Header Row */}
+            <div className="p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-lg text-slate-800 truncate">{session.name}</h3>
+                <p className="text-xs text-slate-400 font-mono">
+                  Criada em: {new Date(session.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3 w-full md:w-auto">
                 <button 
-                  onClick={goToResults}
-                  className="w-full py-4 bg-brand-500 text-white font-bold rounded-xl shadow-lg hover:bg-brand-400 transition-all flex items-center justify-center gap-2 text-lg"
+                   onClick={() => navigate(`/results?sessionId=${session.id}`)}
+                   className="flex-1 md:flex-none items-center justify-center gap-2 px-4 py-2 bg-brand-50 text-brand-700 hover:bg-brand-100 rounded-lg font-medium transition-colors flex"
                 >
-                  Ver Resultados <ArrowRight size={24} />
+                  <BarChart2 size={18} /> Resultados
+                </button>
+                <button 
+                   onClick={() => toggleExpand(session.id)}
+                   className={`flex-1 md:flex-none items-center justify-center gap-2 px-4 py-2 border rounded-lg font-medium transition-colors flex ${expandedSessionId === session.id ? 'bg-slate-100 border-slate-300 text-slate-800' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                >
+                  <QrCode size={18} /> {expandedSessionId === session.id ? 'Fechar' : 'Conectar'}
                 </button>
               </div>
             </div>
 
-            <button 
-              onClick={() => setCurrentSession(null)}
-              className="p-4 bg-slate-200 text-slate-600 rounded-lg font-medium hover:bg-slate-300 transition"
-            >
-              ← Criar outra sessão
-            </button>
+            {/* Expanded QR / Link Area */}
+            {expandedSessionId === session.id && (
+              <div className="bg-slate-50 border-t border-slate-100 p-6 animate-in slide-in-from-top-2 duration-200">
+                <div className="flex flex-col md:flex-row gap-8 items-start">
+                  
+                  {/* Left Column: QR and Link */}
+                  <div className="flex-1 w-full">
+                    <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
+                      <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-200 shrink-0">
+                        <img 
+                          src={getQrUrl(session.id)} 
+                          alt="QR Code" 
+                          className="w-40 h-40 mix-blend-multiply" 
+                        />
+                      </div>
+                      
+                      <div className="space-y-4 w-full">
+                        <div>
+                          <h4 className="font-bold text-slate-700 mb-1">Entrada dos Participantes</h4>
+                          <p className="text-sm text-slate-500">Envie o link ou exiba o código.</p>
+                        </div>
+                        
+                        <div className="relative">
+                          <input 
+                            readOnly
+                            type="text" 
+                            value={getPlayUrl(session.id)}
+                            className="w-full pl-3 pr-12 py-3 bg-white border border-slate-300 rounded-lg text-sm text-slate-600 font-mono shadow-sm"
+                          />
+                          <button 
+                            onClick={() => copyToClipboard(getPlayUrl(session.id), session.id)}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-md transition-colors"
+                            title="Copiar URL"
+                          >
+                            {copiedId === session.id ? <Check size={18} className="text-green-500" /> : <Copy size={18} />}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Presenter Mode */}
+                  <div className="w-full md:w-72 bg-slate-200/50 p-4 rounded-xl border border-slate-200">
+                     <h4 className="font-bold text-slate-700 mb-2 flex items-center gap-2">
+                       <Monitor size={18} /> Modo Apresentação
+                     </h4>
+                     <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+                       Abra uma tela exclusiva para o telão (LED) com o QR Code gigante e botão para revelar os resultados.
+                     </p>
+                     <button
+                        onClick={() => openPresenterMode(session.id)}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-800 text-white rounded-lg font-bold hover:bg-slate-700 transition shadow-lg text-sm"
+                    >
+                        <Monitor size={18} /> Abrir no Telão
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        ))}
+      </div>
     </div>
   );
 };

@@ -5,6 +5,7 @@ import Home from './pages/Home';
 import Play from './pages/Play';
 import Admin from './pages/Admin';
 import Results from './pages/Results';
+import Presenter from './pages/Presenter';
 
 const App: React.FC = () => {
   return (
@@ -17,6 +18,7 @@ const App: React.FC = () => {
             <Route path="/play" element={<Play />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/results" element={<Results />} />
+            <Route path="/presenter" element={<Presenter />} />
           </Routes>
         </main>
       </div>

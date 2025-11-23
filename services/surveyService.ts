@@ -28,6 +28,19 @@ export const getSession = async (id: string): Promise<Session | null> => {
   return data;
 };
 
+export const getSessions = async (): Promise<Session[]> => {
+  const { data, error } = await supabase
+    .from('sessions')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching sessions:', error);
+    return [];
+  }
+  return data;
+};
+
 // --- Answer Management ---
 
 export const saveAnswer = async (sessionId: string, questionId: number, option: AnswerOption) => {
