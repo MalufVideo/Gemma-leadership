@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Answer, AnswerOption } from '../types';
 import { QUESTIONS, OPTIONS } from '../constants';
 import { getAnswersForSession, subscribeToSessionAnswers, getSession } from '../services/surveyService';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Loader2, AlertCircle } from 'lucide-react';
 
 const Results: React.FC = () => {
@@ -70,9 +70,6 @@ const Results: React.FC = () => {
   }
 
   // Calculate stats
-  const uniqueParticipants = new Set(answers.map(a => a.sessionId)).size; // Note: In supabase raw version, we might not have distinct user IDs unless we store a cookie UUID. 
-  // *Fix*: Since Supabase answers table doesn't track "who" strictly without auth, we can just count total answers divided by questions answered, or just show "Total Responses". 
-  // For better accuracy in this anon-mode, let's just show Total Responses.
   const totalResponses = answers.length;
 
   // Data transformation for Recharts
@@ -94,7 +91,7 @@ const Results: React.FC = () => {
         value: count,
         total: total,
         fill: fill,
-        label: opt.label // clean label
+        label: opt.label
       };
     });
   };
@@ -129,28 +126,34 @@ const Results: React.FC = () => {
                   <h3 className="font-bold text-slate-800 text-lg leading-snug">{q.text}</h3>
                 </div>
 
-                <div className="h-48 w-full">
+                <div className="h-64 w-full">
                   {totalForQ > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={data} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                        <XAxis type="number" hide />
-                        <YAxis 
-                          dataKey="name" 
-                          type="category" 
-                          width={100} 
-                          tick={{fontSize: 11, fill: '#64748b'}} 
-                          interval={0}
-                        />
-                        <Tooltip 
-                          cursor={{fill: 'transparent'}}
-                          contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
-                        />
-                        <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                      <PieChart>
+                        <Pie
+                          data={data}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={40}
+                          outerRadius={80}
+                          paddingAngle={2}
+                          dataKey="value"
+                        >
                           {data.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                            <Cell key={`cell-${index}`} fill={entry.fill} stroke="#fff" strokeWidth={2} />
                           ))}
-                        </Bar>
-                      </BarChart>
+                        </Pie>
+                        <Tooltip 
+                          contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
+                          itemStyle={{color: '#334155'}}
+                        />
+                        <Legend 
+                           verticalAlign="bottom" 
+                           height={36} 
+                           iconType="circle"
+                           wrapperStyle={{ paddingTop: '10px', fontSize: '12px' }}
+                        />
+                      </PieChart>
                     </ResponsiveContainer>
                   ) : (
                     <div className="h-full flex items-center justify-center text-slate-300 italic text-sm bg-slate-50 rounded-lg border border-dashed border-slate-200">
