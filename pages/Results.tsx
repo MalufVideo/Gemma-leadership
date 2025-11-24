@@ -119,10 +119,10 @@ const Results: React.FC = () => {
           return (
             <div key={q.id} className="bg-white rounded shadow-sm border border-slate-200 flex flex-col p-1 min-w-0">
               <div 
-                className="text-[10px] leading-3 text-slate-700 font-semibold mb-1 text-center h-8 flex items-center justify-center overflow-hidden px-1"
+                className="text-[10px] leading-3 text-slate-700 font-semibold mb-1 text-center h-14 flex items-center justify-center overflow-hidden px-1"
                 title={q.text}
               >
-                <span className="line-clamp-2">{q.id}. {q.text}</span>
+                <span className="line-clamp-4">{q.id}. {q.text}</span>
               </div>
 
               <div className="flex-1 min-h-0 w-full">

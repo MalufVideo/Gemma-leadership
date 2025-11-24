@@ -4,7 +4,7 @@ export const QUESTIONS: Question[] = [
   { id: 1, text: "Tenho compreensão do que meu líder me demanda" },
   { id: 2, text: "Me parece claro o que meu líder está dizendo durante nossas conversas" },
   { id: 3, text: "Meu líder se assegura de que meu entendimento sobre sua fala está correto" },
-  { id: 4, text: "Meu líder checa meu entendimento sobre o que está sento dito ou solicitado" },
+  { id: 4, text: "Minha líder checa meu entendimento sobre o que está sento dito ou solicitado" },
   { id: 5, text: "Meu líder esclarece claramente as prioridades de tarefa" },
   { id: 6, text: "Tenho liberdade para questionar os posicionamentos do meu líder" },
   { id: 7, text: "Meu líder faz aquilo que fala" },
